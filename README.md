@@ -52,8 +52,10 @@ the build:
     `ChatTranslationPanelNode`: the translation panel's toggle/close no
     longer requires Premium.
   - `003-translation-panel-visibility.patch` —
-    `ChatControllerContentData`: compute the chat translation state for
-    every chat, not only for Premium / suggested / auto-translate peers.
+    `ChatControllerContentData`: initialise `maybeSuggestPremium` to
+    `true`, so the chat translation state is computed for every chat
+    instead of only after the premium-suggestion threshold (or for
+    Premium / auto-translate peers).
   - `004-branding-display-name.patch` — `Telegram/BUILD`: display name
     (and main-app bundle name) `Telegram` → `Foxgram`. The name is
     hardcoded in plist fragments in `Telegram/BUILD`, so it cannot be

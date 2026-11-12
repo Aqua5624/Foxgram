@@ -1,14 +1,14 @@
 diff --git a/submodules/TelegramUI/Sources/ChatControllerContentData.swift b/submodules/TelegramUI/Sources/ChatControllerContentData.swift
-index 3dacb317..dcc8c0ba 100644
+index 3dacb317..ab25bdbb 100644
 --- a/submodules/TelegramUI/Sources/ChatControllerContentData.swift
 +++ b/submodules/TelegramUI/Sources/ChatControllerContentData.swift
-@@ -2213,7 +2213,8 @@ extension ChatControllerImpl {
+@@ -2209,7 +2209,8 @@ extension ChatControllerImpl {
+                         hasAutoTranslate,
+                         ApplicationSpecificNotice.translationSuggestion(accountManager: context.sharedContext.accountManager)
+                     ) |> mapToSignal { isPremium, isHidden, hasAutoTranslate, counterAndTimestamp -> Signal<ChatPresentationTranslationState?, NoError> in
+-                        var maybeSuggestPremium = false
++                        // Foxgram patch: always offer chat translation, not only after the premium-suggestion threshold has been reached.
++                        var maybeSuggestPremium = true
                          if counterAndTimestamp.0 >= 3 {
                              maybeSuggestPremium = true
                          }
--                        if (isPremium || maybeSuggestPremium || hasAutoTranslate) && !isHidden {
-+                        // Foxgram patch: compute the chat translation state for every chat, not only for Premium users, suggested users or auto-translate peers.
-+                        if !isHidden {
-                             return chatTranslationState(context: context, peerId: peerId, threadId: chatLocation.threadId)
-                             |> map { translationState -> ChatPresentationTranslationState? in
-                                 if let translationState, !translationState.fromLang.isEmpty && (translationState.fromLang != baseLanguageCode || translationState.isEnabled) {
