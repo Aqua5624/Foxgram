@@ -134,5 +134,5 @@ jobs:
         run: |
           gh release create build-test-1 artifacts/Foxgram.ipa \
             --title "Foxgram build test 1 (Telegram-iOS 12.10, unmodified)" \
-            --notes "Unsigned buildability-test IPA of unmodified Telegram-iOS 12.10 (pinned commit 72e573e8b69f, bundle id org.aqua5624.foxgram). Built with DUMMY placeholder api_id/api_hash — this IPA cannot log in. For build verification only." \
+            --notes "Unsigned buildability-test IPA of unmodified Telegram-iOS 12.10 (pinned commit 72e573e8b69f, bundle id org.aqua5624.foxgram). API credentials are taken from the FOXGRAM_API_ID / FOXGRAM_API_HASH repository secrets when configured (dummy placeholders only as fallback). For build verification only." \
           || gh release upload build-test-1 artifacts/Foxgram.ipa --clobber
