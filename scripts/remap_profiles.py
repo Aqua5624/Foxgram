@@ -18,6 +18,7 @@ codesigning material, which every fork must supply for itself (see the
 """
 
 import argparse
+import datetime
 import os
 import plistlib
 import subprocess
@@ -130,6 +131,12 @@ def main():
             profile = plistlib.loads(decoded)
             profile = replace_bundle(profile, args.old_bundle_id, args.new_bundle_id)
             profile.pop("DER-Encoded-Profile", None)
+            # The stock profiles expired on 2026-10-30 and rules_apple's
+            # plisttool refuses expired profiles ("provisioning profile
+            # ExpirationDate is in the past"). Re-issued profiles get a new
+            # expiration date, like a freshly issued profile would have.
+            if "ExpirationDate" in profile:
+                profile["ExpirationDate"] = datetime.datetime(2031, 10, 30, 17, 6, 30)
 
             with tempfile.NamedTemporaryFile("wb", suffix=".plist", delete=False) as tf:
                 plistlib.dump(profile, tf)
