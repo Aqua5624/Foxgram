@@ -1,0 +1,134 @@
+name: Build Foxgram
+
+# Unmodified-build test: builds upstream Telegram-iOS 12.10 (pinned commit)
+# with Foxgram build configuration on a GitHub-hosted macos-26 runner.
+# Based on upstream's own .github/workflows/build.yml at the pinned commit,
+# modernised (macos-26, actions/checkout v4, repo cloned by the workflow
+# instead of being the workspace).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout Foxgram build repo
+        uses: actions/checkout@v4
+
+      - name: Clone Telegram-iOS at pinned commit
+        run: |
+          set -x
+          time git clone https://github.com/TelegramMessenger/Telegram-iOS.git telegram-ios
+          cd telegram-ios
+          git checkout 72e573e8b69f8f12736ac6086c826ab10e37d242
+          time git submodule update --init --recursive -j8
+          cat versions.json
+          df -h .
+
+      - name: Select Xcode from versions.json
+        run: |
+          set -x
+          ls /Applications | grep -i xcode || true
+          XCODE_VERSION=$(python3 -c 'import json;print(json.load(open("telegram-ios/versions.json"))["xcode"])')
+          echo "Required Xcode: $XCODE_VERSION"
+          sudo xcode-select -s /Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Create canonical source directory
+        run: |
+          set -x
+          # Upstream does this because source paths are embedded in the binary
+          # and should be stable across builds.
+          sudo mkdir -p /Users/Shared
+          cp -R telegram-ios /Users/Shared/telegram-ios
+          ls /Users/Shared/telegram-ios | head -20
+
+      - name: Generate Foxgram configuration
+        env:
+          FOXGRAM_API_ID: ${{ secrets.FOXGRAM_API_ID }}
+          FOXGRAM_API_HASH: ${{ secrets.FOXGRAM_API_HASH }}
+        run: |
+          python3 scripts/generate_config.py \
+            --output /Users/Shared/telegram-ios/build-system/foxgram-configuration.json
+          python3 -c 'import json; d=json.load(open("/Users/Shared/telegram-ios/build-system/foxgram-configuration.json")); d["api_hash"]="***"; print(json.dumps(d, indent=2))'
+
+      - name: Prepare remapped fake-codesigning profiles
+        run: |
+          set -x
+          SRC=/Users/Shared/telegram-ios/build-system/fake-codesigning
+          DST=/Users/Shared/telegram-ios/foxgram-codesigning
+          mkdir -p "$DST/certs" "$DST/profiles"
+          cp "$SRC"/certs/* "$DST/certs/"
+          python3 scripts/remap_profiles.py \
+            --source "$SRC/profiles" \
+            --certs "$DST/certs" \
+            --destination "$DST/profiles" \
+            --old-bundle-id ph.telegra.Telegraph \
+            --new-bundle-id org.aqua5624.foxgram
+          ls -la "$DST/profiles"
+
+      - name: Build the app (unmodified upstream)
+        run: |
+          set -x
+
+          SOURCE_DIR=/Users/Shared/telegram-ios
+          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
+
+          cd $SOURCE_DIR
+
+          BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
+          export APP_VERSION=$(python3 -c 'import json;print(json.load(open("versions.json"))["app"])')
+          export COMMIT_COUNT=$(git rev-list --count HEAD)
+          export BUILD_NUMBER="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+
+          df -h .
+
+          python3 build-system/Make/ImportCertificates.py --path foxgram-codesigning/certs
+
+          time python3 -u build-system/Make/Make.py \
+            --bazelUserRoot="$BAZEL_USER_ROOT" \
+            build \
+            --configurationPath="build-system/foxgram-configuration.json" \
+            --codesigningInformationPath=foxgram-codesigning \
+            --configuration=release_arm64 \
+            --buildNumber="$BUILD_NUMBER"
+
+          df -h .
+
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          found=0
+          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
+            if [ -f "$f" ]; then cp "$f" "$GITHUB_WORKSPACE/artifacts/Foxgram.ipa"; found=1; fi
+          done
+          if [ "$found" != "1" ]; then
+            echo "Telegram.ipa not found in bazel-out"
+            find bazel-out -name "*.ipa" 2>/dev/null | head
+            exit 1
+          fi
+          ls -la "$GITHUB_WORKSPACE/artifacts"
+
+      - name: Upload artifact
+        if: success()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: Foxgram-ipa
+          path: artifacts/Foxgram.ipa
+
+      - name: Publish GitHub Release with IPA
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create build-test-1 artifacts/Foxgram.ipa \
+            --title "Foxgram build test 1 (Telegram-iOS 12.10, unmodified)" \
+            --notes "Unsigned buildability-test IPA of unmodified Telegram-iOS 12.10 (pinned commit 72e573e8b69f, bundle id org.aqua5624.foxgram). Built with DUMMY placeholder api_id/api_hash — this IPA cannot log in. For build verification only." \
+          || gh release upload build-test-1 artifacts/Foxgram.ipa --clobber
