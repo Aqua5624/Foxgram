@@ -104,15 +104,19 @@ jobs:
           df -h .
 
           mkdir -p "$GITHUB_WORKSPACE/artifacts"
-          found=0
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            if [ -f "$f" ]; then cp "$f" "$GITHUB_WORKSPACE/artifacts/Foxgram.ipa"; found=1; fi
-          done
-          if [ "$found" != "1" ]; then
-            echo "Telegram.ipa not found in bazel-out"
-            find bazel-out -name "*.ipa" 2>/dev/null | head
+          # Bazel 8 output layout: the IPA is under bazel-bin/Telegram/ (a
+          # symlink into bazel-out/ios_arm64-opt-.../bin/Telegram/). The old
+          # upstream glob (applebin_ios-*) no longer matches, and plain
+          # `find` does not follow the bazel-bin/bazel-out symlinks — use -L.
+          ls bazel-bin/Telegram/ || true
+          IPA_PATH=$(find -L bazel-out bazel-bin -name "Telegram.ipa" -type f 2>/dev/null | head -1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "Telegram.ipa not found"
+            find -L bazel-out bazel-bin -name "*.ipa" 2>/dev/null | head
             exit 1
           fi
+          echo "Found IPA at: $IPA_PATH"
+          cp "$IPA_PATH" "$GITHUB_WORKSPACE/artifacts/Foxgram.ipa"
           ls -la "$GITHUB_WORKSPACE/artifacts"
 
       - name: Upload artifact
