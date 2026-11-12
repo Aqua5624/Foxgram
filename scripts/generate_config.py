@@ -42,6 +42,9 @@ def main():
         "api_id": str(api_id),
         "api_hash": str(api_hash),
         "team_id": FAKE_TEAM_ID,
+        # Required by the pinned (12.10) BuildConfiguration.py; the pinned
+        # upstream template uses "0".
+        "app_center_id": "0",
         "is_internal_build": "true",
         "is_appstore_build": "false",
         "appstore_id": "0",
