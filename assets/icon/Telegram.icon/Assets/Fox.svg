@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Fox</title>
+    <g id="Fox" stroke="none" fill="none" fill-rule="nonzero">
+        <path d="M262,452 L318,142 L486,318 Z" fill="#E8640C"></path>
+        <path d="M762,452 L706,142 L538,318 Z" fill="#E8640C"></path>
+        <path d="M322,392 L348,232 L442,322 Z" fill="#FFD9AE"></path>
+        <path d="M702,392 L676,232 L582,322 Z" fill="#FFD9AE"></path>
+        <path d="M272,420 L512,360 L752,420 L768,540 L512,818 L256,540 Z" fill="#FFF4E0"></path>
+        <path d="M360,398 L664,398 L512,545 Z" fill="#F07F13"></path>
+        <path d="M262,528 L512,812 L506,612 L396,520 L312,498 Z" fill="#FFE7C4"></path>
+        <path d="M762,528 L512,812 L518,612 L628,520 L712,498 Z" fill="#FFE7C4"></path>
+        <path d="M372,478 L462,462 L458,492 L378,502 Z" fill="#2E2A26"></path>
+        <path d="M652,478 L562,462 L566,492 L646,502 Z" fill="#2E2A26"></path>
+        <path d="M468,722 L556,722 L512,776 Z" fill="#2E2A26"></path>
+    </g>
+</svg>

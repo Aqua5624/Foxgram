@@ -1,0 +1,14 @@
+diff --git a/submodules/AccountContext/Sources/AccountContext.swift b/submodules/AccountContext/Sources/AccountContext.swift
+index 006f7a97..6c152371 100644
+--- a/submodules/AccountContext/Sources/AccountContext.swift
++++ b/submodules/AccountContext/Sources/AccountContext.swift
+@@ -2068,6 +2068,9 @@ public struct TranslationConfiguration {
+             if autoValue == "alternative" {
+                 autoValue = "disabled"
+             }
++            // Foxgram patch: always use on-device (.system) chat translation,
++            // ignoring the server-delivered translations_auto_enabled value.
++            autoValue = "system"
+             return TranslationConfiguration(manual: TranslationAvailability(string: manualValue), auto: TranslationAvailability(string: autoValue))
+         } else {
+             return .defaultValue

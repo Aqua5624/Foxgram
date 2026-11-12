@@ -1,7 +1,10 @@
 name: Build Foxgram
 
-# Unmodified-build test: builds upstream Telegram-iOS 12.10 (pinned commit)
-# with Foxgram build configuration on a GitHub-hosted macos-26 runner.
+# Builds upstream Telegram-iOS 12.10 (pinned commit) with the Foxgram
+# build configuration on a GitHub-hosted macos-26 runner, with the
+# Foxgram patch set (patches/) and branding (assets/icon/) applied to the
+# cloned tree before the build. Phase 1: translation spike (force
+# on-device chat translation without Premium) + Foxgram name/icon.
 # Based on upstream's own .github/workflows/build.yml at the pinned commit,
 # modernised (macos-26, actions/checkout v4, repo cloned by the workflow
 # instead of being the workspace).
@@ -49,6 +52,25 @@ jobs:
           cp -R telegram-ios /Users/Shared/telegram-ios
           ls /Users/Shared/telegram-ios | head -20
 
+      - name: Apply Foxgram patches and branding
+        run: |
+          set -x
+          SRC=/Users/Shared/telegram-ios
+          cd "$SRC"
+          # Foxgram source patches (translation spike + display name),
+          # written against the pinned commit and verified to apply
+          # cleanly. Applied in filename order.
+          for patch in "$GITHUB_WORKSPACE"/patches/*.patch; do
+            echo "Applying $patch"
+            git apply --verbose "$patch"
+          done
+          git diff --stat
+          # Foxgram app icon: replace the Icon Composer package the main
+          # app icon is compiled from (Telegram/BUILD composer_icon_folders).
+          rm -rf Telegram/Telegram-iOS/Telegram.icon
+          cp -R "$GITHUB_WORKSPACE/assets/icon/Telegram.icon" Telegram/Telegram-iOS/Telegram.icon
+          ls -la Telegram/Telegram-iOS/Telegram.icon Telegram/Telegram-iOS/Telegram.icon/Assets
+
       - name: Generate Foxgram configuration
         env:
           FOXGRAM_API_ID: ${{ secrets.FOXGRAM_API_ID }}
@@ -73,7 +95,7 @@ jobs:
             --new-bundle-id org.aqua5624.foxgram
           ls -la "$DST/profiles"
 
-      - name: Build the app (unmodified upstream)
+      - name: Build the app (Foxgram patches applied)
         run: |
           set -x
 
@@ -132,7 +154,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create build-test-1 artifacts/Foxgram.ipa \
-            --title "Foxgram build test 1 (Telegram-iOS 12.10, unmodified)" \
-            --notes "Unsigned buildability-test IPA of unmodified Telegram-iOS 12.10 (pinned commit 72e573e8b69f, bundle id org.aqua5624.foxgram). API credentials are taken from the FOXGRAM_API_ID / FOXGRAM_API_HASH repository secrets when configured (dummy placeholders only as fallback). For build verification only." \
-          || gh release upload build-test-1 artifacts/Foxgram.ipa --clobber
+          gh release create phase1-v0.2.0 artifacts/Foxgram.ipa \
+            --title "Foxgram v0.2.0 (Phase 1: translation spike + branding)" \
+            --notes "Unsigned IPA of Telegram-iOS 12.10 (pinned commit 72e573e8b69f, bundle id org.aqua5624.foxgram) with the Foxgram Phase 1 patch set: on-device chat translation forced without Premium (translation spike), display name Foxgram, original fox app icon. API credentials are taken from the FOXGRAM_API_ID / FOXGRAM_API_HASH repository secrets when configured (dummy placeholders only as fallback)." \
+          || gh release upload phase1-v0.2.0 artifacts/Foxgram.ipa --clobber
