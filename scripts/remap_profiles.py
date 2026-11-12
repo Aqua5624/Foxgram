@@ -89,14 +89,30 @@ def main():
         ]
     )
 
+    # Note: no `-v` here — the upstream SelfSigned certificate is untrusted,
+    # so the "valid identities only" filter would hide it.
     identities = run(
-        ["security", "find-identity", "-v", "-p", "codesigning", keychain]
+        ["security", "find-identity", "-p", "codesigning", keychain]
     ).stdout.decode("utf-8", "replace")
     identity = None
     for line in identities.splitlines():
         if '"' in line:
             identity = line.split('"')[1]
             break
+    if not identity:
+        # Fall back to extracting the CN from the p12, the same approach as
+        # upstream's GenerateProfiles.get_signing_identity_from_p12.
+        cert_pem = subprocess.run(
+            ["openssl", "pkcs12", "-in", p12_path, "-passin", "pass:", "-nokeys", "-legacy"],
+            capture_output=True,
+        ).stdout
+        subject = subprocess.run(
+            ["openssl", "x509", "-noout", "-subject", "-nameopt", "oneline,-esc_msb"],
+            input=cert_pem,
+            capture_output=True,
+        ).stdout.decode("utf-8", "replace").strip()
+        if "CN = " in subject:
+            identity = subject.split("CN = ")[-1].split(",")[0].strip()
     if not identity:
         print("No codesigning identity found after importing {}".format(p12_path))
         sys.exit(1)
